@@ -147,4 +147,24 @@
 
   function getNewReview() {
     if (currentReviews.length === 0) {
-      document.getElementById('reviewText').innerText =
+      document.getElementById('reviewText').innerText = "No reviews available.";
+      return;
+    }
+    const randomIndex = Math.floor(Math.random() * currentReviews.length);
+    // रिव्ह्यू डिस्प्ले करताना कोट्स काढून टाकणे
+    document.getElementById('reviewText').innerText = currentReviews[randomIndex].replace(/^"|"$/g, '');
+  }
+
+  function copyAndGo() {
+    const text = document.getElementById('reviewText').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      window.location.href = gmbLink;
+    }).catch(() => {
+      window.location.href = gmbLink;
+    });
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
