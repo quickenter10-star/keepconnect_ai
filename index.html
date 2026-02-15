@@ -47,25 +47,13 @@
 </div>
 
 <script>
-  const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD/pub?gid=0&single=true&output=csv"; 
+  // कॅशे टाळण्यासाठी लिंकच्या शेवटी रँडम नंबर लावला आहे
+  const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD/pub?gid=0&single=true&output=csv&cache=" + Math.random(); 
 
   let rawClientData = {};
   let currentReviews = [];
   let gmbLink = "";
   let lastReviewIndex = -1;
-
-  function parseCSV(text) {
-    const rows = [];
-    // ही पद्धत कोट्समधील डेटा व्यवस्थित वाचते
-    const re = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
-    const lines = text.split(/\r?\n/);
-    for (let line of lines) {
-      if (!line.trim()) continue;
-      const values = line.split(re).map(v => v.replace(/^"|"$/g, '').trim());
-      rows.push(values);
-    }
-    return rows;
-  }
 
   async function init() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -75,16 +63,28 @@
     try {
       const response = await fetch(sheetCSV);
       const csvText = await response.text();
-      const rows = parseCSV(csvText);
       
-      // ID शोधताना दोन्हीकडच्या स्पेस काढून टाकणे
-      const data = rows.find(r => r[0] && r[0].toString().trim() === clientID.trim());
+      // सोपी पद्धत: ओळींमध्ये विभागणे
+      const rows = csvText.split(/\r?\n/);
+      let targetRow = null;
 
-      if (data) {
-        gmbLink = data[3] || "#";
-        document.getElementById('bizName').innerText = data[1] || "N/A";
-        document.getElementById('bizLoc').innerText = data[2] || "N/A";
-        document.getElementById('bizCat').innerText = data[4] || "General";
+      for (let row of rows) {
+        // ID शोधण्यासाठी ओळीच्या सुरुवातीला चेक करणे
+        if (row.startsWith(clientID + ",") || row.startsWith('"' + clientID + '"')) {
+          // CSV ला कॉलम मध्ये नीट विभागणे (कोट्स सांभाळून)
+          targetRow = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+          if (targetRow) {
+             targetRow = targetRow.map(v => v.replace(/^"|"$/g, '').trim());
+             if (targetRow[0] === clientID) break; 
+          }
+        }
+      }
+
+      if (targetRow) {
+        gmbLink = targetRow[3] || "#";
+        document.getElementById('bizName').innerText = targetRow[1] || "N/A";
+        document.getElementById('bizLoc').innerText = targetRow[2] || "N/A";
+        document.getElementById('bizCat').innerText = targetRow[4] || "General";
 
         const langIndices = {
           "English": 5, "Hindi": 6, "Marathi": 7, "Punjabi": 8, "Gujarati": 9,
@@ -92,15 +92,14 @@
         };
 
         const select = document.getElementById('langSelect');
-        select.innerHTML = ""; // ड्रॉपडाउन साफ करा
+        select.innerHTML = "";
         let langFound = false;
 
         for (let [lang, idx] of Object.entries(langIndices)) {
-          let content = data[idx];
-          if (content && content.trim().length > 2) {
-            // खास बदल: सर्व कोट्स काढून मग सेमी-कोलनने विभागणे
-            let cleanContent = content.replace(/"/g, '').trim();
-            let reviewsArray = cleanContent.split(";").map(r => r.trim()).filter(r => r.length > 5);
+          let content = targetRow[idx];
+          if (content && content.length > 5) {
+            // सर्व रिव्ह्यूना नीट साफ करून Array बनवणे
+            let reviewsArray = content.split(";").map(r => r.trim()).filter(r => r.length > 5);
             
             if (reviewsArray.length > 0) {
               rawClientData[lang] = reviewsArray;
@@ -116,8 +115,8 @@
         document.getElementById('loader').style.display = "none";
         document.getElementById('mainCard').style.display = "block";
         updateLang(select.value);
-      } else { document.getElementById('loader').innerText = "ID: " + clientID + " Not Found!"; }
-    } catch (e) { document.getElementById('loader').innerText = "Network Error!"; }
+      } else { document.getElementById('loader').innerText = "ID Not Found!"; }
+    } catch (e) { document.getElementById('loader').innerText = "Load Error!"; }
   }
 
   function updateLang(lang) {
@@ -128,16 +127,11 @@
 
   function getNewReview() {
     if (currentReviews.length === 0) return;
-    
     let randomIndex;
     if (currentReviews.length > 1) {
-      do {
-        randomIndex = Math.floor(Math.random() * currentReviews.length);
-      } while (randomIndex === lastReviewIndex);
-    } else {
-      randomIndex = 0;
-    }
-
+      do { randomIndex = Math.floor(Math.random() * currentReviews.length); } 
+      while (randomIndex === lastReviewIndex);
+    } else { randomIndex = 0; }
     lastReviewIndex = randomIndex;
     document.getElementById('reviewText').innerText = currentReviews[randomIndex];
   }
@@ -147,7 +141,6 @@
     navigator.clipboard.writeText(text).then(() => { window.location.href = gmbLink; })
     .catch(() => { window.location.href = gmbLink; });
   }
-
   window.onload = init;
 </script>
 </body>
