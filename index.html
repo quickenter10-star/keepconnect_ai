@@ -52,6 +52,7 @@
   let rawClientData = {};
   let currentReviews = [];
   let gmbLink = "";
+  let lastReviewIndex = -1;
 
   function parseCSV(text) {
     const rows = [];
@@ -100,10 +101,10 @@
 
         for (let [lang, idx] of Object.entries(langIndices)) {
           let content = data[idx];
-          if (content && content.trim().length > 5) {
-            // खास बदल: आधी सुरुवातीचे कोट्स काढणे आणि मग सेमी-कोलनने विभागणे
+          // हिंदी आणि इतर भाषांचा डेटा नीट वाचण्यासाठी 'if' कंडिशन थोडी सैल केली आहे
+          if (content && content.replace(/^"|"$/g, '').trim().length > 2) {
             let cleanContent = content.replace(/^"|"$/g, '').trim();
-            rawClientData[lang] = cleanContent.split(";").map(r => r.trim()).filter(r => r.length > 5);
+            rawClientData[lang] = cleanContent.split(";").map(r => r.trim()).filter(r => r.length > 2);
             
             let opt = document.createElement('option');
             opt.value = lang; opt.innerText = lang;
@@ -122,13 +123,23 @@
 
   function updateLang(lang) {
     currentReviews = rawClientData[lang] || [];
+    lastReviewIndex = -1; // भाषा बदलल्यावर रँडम परत सुरू होईल
     getNewReview();
   }
 
   function getNewReview() {
-    if (currentReviews.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * currentReviews.length);
-    // रिव्ह्यू मधील जास्तीचे कोट्स काढणे
+    if (currentReviews.length <= 1) {
+        if(currentReviews.length === 1) document.getElementById('reviewText').innerText = currentReviews[0];
+        return;
+    }
+    
+    let randomIndex;
+    // प्रत्येक वेळी नवीन रिव्ह्यू निवडण्यासाठी लूप (Repeat टाळण्यासाठी)
+    do {
+      randomIndex = Math.floor(Math.random() * currentReviews.length);
+    } while (randomIndex === lastReviewIndex);
+
+    lastReviewIndex = randomIndex;
     let review = currentReviews[randomIndex].replace(/^"|"$/g, '').trim();
     document.getElementById('reviewText').innerText = review;
   }
