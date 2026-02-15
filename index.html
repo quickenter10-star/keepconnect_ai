@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body { background-color: #6a4bc4; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: white; width: 92%; max-width: 420px; border-radius: 30px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); text-align: center; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .badge { background: #eef7ff; color: #3498db; font-size: 11px; font-weight: 800; padding: 6px 15px; border-radius: 20px; text-transform: uppercase; }
+    .lang-dropdown { border: 1px solid #ddd; border-radius: 12px; padding: 6px 10px; font-size: 14px; background: #fff; outline: none; cursor: pointer; }
+    .biz-name { color: #3498db; font-size: 26px; font-weight: bold; margin: 10px 0 5px 0; text-transform: capitalize; }
+    .location { color: #888; font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .category-badge { display: inline-block; background: #eef7ff; color: #3498db; padding: 8px 18px; border-radius: 15px; font-size: 14px; font-weight: 600; border: 1px solid #d0e7ff; margin-bottom: 25px; }
+    .review-card { border: 1px solid #f0f0f0; border-top: 4px solid #3498db; border-radius: 20px; padding: 25px; text-align: center; background: #fff; margin-bottom: 20px; }
+    .stars { color: #f1c40f; margin-bottom: 15px; font-size: 16px; }
+    .review-text { color: #444; font-size: 16px; line-height: 1.6; min-height: 90px; margin: 0; }
+    .action-buttons { display: flex; flex-direction: column; gap: 12px; }
+    .btn { border: none; border-radius: 15px; padding: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; font-size: 16px; }
+    .btn-change { background: #f1f4f9; color: #333; border: 1px solid #e0e0e0; }
+    .btn-copy { background: #1da1f2; color: white; }
+    .footer { text-align: center; font-size: 11px; color: #999; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; }
+    .footer b { color: #3498db; }
+    #loader { color: white; font-family: sans-serif; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div id="loader">Loading Data...</div>
+
+<div class="card" id="mainCard" style="display:none;">
+  <div class="top-bar">
+    <div class="badge">KEEPCONNECT AI</div>
+    <select id="langSelect" class="lang-dropdown" onchange="updateLang(this.value)">
+      </select>
+  </div>
+
+  <div class="biz-name" id="bizName">Business Name</div>
+  <div class="location"><i class="fa-solid fa-location-pin"></i> <span id="bizLoc">Location</span></div>
+  <div class="category-badge"><i class="fa-solid fa-store"></i> • <span id="bizCat">Category</span></div>
+
+  <div class="review-card">
+    <div class="stars">★★★★★</div>
+    <p class="review-text" id="reviewText">Loading review...</p>
+  </div>
+
+  <div class="action-buttons">
+    <button class="btn btn-change" onclick="getNewReview()"><i class="fa-solid fa-arrows-rotate"></i> Change Review</button>
+    <button class="btn btn-copy" onclick="copyAndGo()"><i class="fa-solid fa-paste"></i> Copy & Go</button>
+  </div>
+
+  <div class="footer">⚡ Powered by <b>KeepConnect App</b></div>
+</div>
+
+<script>
+  // १. तुमची Google Sheet CSV लिंक इथे टाका
+  const sheetCSV = "YOUR_CSV_PUBLISHED_URL_HERE"; 
+
+  let rawClientData = {};
+  let currentReviews = [];
+  let gmbLink = "";
+
+  async function init() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientID = urlParams.get('id');
+
+    if (!clientID) {
+      document.getElementById('loader').innerText = "Error: No Client ID provided in URL!";
+      return;
+    }
+
+    try {
+      const response = await fetch(sheetCSV);
+      const csvText = await response.text();
+      // CSV Parsing (Handling commas in quotes if necessary)
+      const rows = csvText.split("\n").map(row => row.split(","));
+      
+      const data = rows.find(r => r[0] && r[0].trim() === clientID);
+
+      if (data) {
+        // Data Mapping (A=0, B=1, C=2, D=3, E=4, F=5... O=14)
+        gmbLink = data[3].trim();
+        document.getElementById('bizName').innerText = data[1];
+        document.getElementById('bizLoc').innerText = data[2];
+        document.getElementById('bizCat').innerText = data[4];
+
+        // Language Mapping
+        const langMap = {
+          "English": data[5], "Hindi": data[6], "Marathi": data[7],
+          "Punjabi": data[8], "Gujarati": data[9], "Tamil": data[10],
+          "Telugu": data[11], "Kannada": data[12], "Bengali": data[13], "Malayalam": data[14]
+        };
+
+        const select = document.getElementById('langSelect');
+        let langFound = false;
+
+        for (let lang in langMap) {
+          let content = langMap[lang];
+          // Check if column has data and is not just whitespace
+          if (content && content.trim().length > 2) {
+            rawClientData[lang] = content.split(";");
+            let opt = document.createElement('option');
+            opt.value = lang;
+            opt.innerHTML = lang;
+            select.appendChild(opt);
+            langFound = true;
+          }
+        }
+
+        if(!langFound) {
+            document.getElementById('loader').innerText = "No reviews available for this client!";
+            return;
+        }
+
+        document.getElementById('loader').style.display = "none";
+        document.getElementById('mainCard').style.display = "block";
+        updateLang(select.value);
+
+      } else {
+        document.getElementById('loader').innerText = "Error: Client ID not found in database!";
+      }
+    } catch (e) {
+      document.getElementById('loader').innerText = "Error: Unable to fetch data!";
+      console.error(e);
+    }
+  }
+
+  function updateLang(lang) {
+    currentReviews = [...rawClientData[lang]];
+    getNewReview();
+  }
+
+  function getNewReview() {
+    if (currentReviews.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * currentReviews.length);
+    const review = currentReviews[randomIndex].trim();
+    document.getElementById('reviewText').innerText = review;
+  }
+
+  function copyAndGo() {
+    const text = document.getElementById('reviewText').innerText;
+    if(!text || text.includes("Loading")) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      window.location.href = gmbLink;
+    }).catch(() => {
+      // Fallback if clipboard fails
+      window.location.href = gmbLink;
+    });
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
