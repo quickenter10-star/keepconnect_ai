@@ -13,9 +13,9 @@
     .biz-name { color: #3498db; font-size: 24px; font-weight: bold; margin: 10px 0 5px 0; line-height: 1.2; }
     .location { color: #888; font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 5px; }
     .category-badge { display: inline-block; background: #eef7ff; color: #3498db; padding: 6px 15px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border: 1px solid #d0e7ff; }
-    .review-card { border: 1px solid #f0f0f0; border-top: 5px solid #3498db; border-radius: 20px; padding: 20px; background: #fff; margin-bottom: 20px; min-height: 140px; display: flex; flex-direction: column; justify-content: center; }
+    .review-card { border: 1px solid #f0f0f0; border-top: 5px solid #3498db; border-radius: 20px; padding: 20px; background: #fff; margin-bottom: 20px; min-height: 140px; display: flex; flex-direction: column; justify-content: center; position: relative; }
     .stars { color: #f1c40f; margin-bottom: 10px; font-size: 18px; }
-    .review-text { color: #444; font-size: 16px; line-height: 1.5; margin: 0; font-style: italic; word-wrap: break-word; }
+    .review-text { color: #444; font-size: 15px; line-height: 1.5; margin: 0; font-style: italic; word-wrap: break-word; text-align: left; }
     .btn { border: none; border-radius: 15px; padding: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; width: 100%; margin-bottom: 10px; transition: 0.2s; }
     .btn-change { background: #f1f4f9; color: #333; border: 1px solid #e0e0e0; }
     .btn-copy { background: #1da1f2; color: white; box-shadow: 0 4px 15px rgba(29, 161, 242, 0.3); }
@@ -25,19 +25,19 @@
 </head>
 <body>
 
-<div id="loader">Loading Database...</div>
+<div id="loader">Loading Business Data...</div>
 
 <div class="card" id="mainCard" style="display:none;">
   <div class="top-bar">
     <div class="badge">KEEPCONNECT AI</div>
     <select id="langSelect" class="lang-dropdown" onchange="updateLang(this.value)"></select>
   </div>
-  <div class="biz-name" id="bizName">Business Name</div>
-  <div class="location"><i class="fa-solid fa-location-pin"></i> <span id="bizLoc">Location</span></div>
-  <div class="category-badge"><i class="fa-solid fa-tag"></i> <span id="bizCat">Category</span></div>
+  <div class="biz-name" id="bizName">...</div>
+  <div class="location"><i class="fa-solid fa-location-pin"></i> <span id="bizLoc">...</span></div>
+  <div class="category-badge"><i class="fa-solid fa-tag"></i> <span id="bizCat">...</span></div>
   <div class="review-card">
     <div class="stars">★★★★★</div>
-    <p class="review-text" id="reviewText">Loading...</p>
+    <p class="review-text" id="reviewText">Loading reviews...</p>
   </div>
   <div class="action-buttons">
     <button class="btn btn-change" onclick="getNewReview()"><i class="fa-solid fa-sync-alt"></i> Change Review</button>
@@ -47,13 +47,14 @@
 </div>
 
 <script>
-  // कॅशे टाळण्यासाठी लिंकच्या शेवटी रँडम नंबर लावला आहे
-  const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD/pub?gid=0&single=true&output=csv&cache=" + Math.random(); 
+  // Google Sheet चा मूळ URL
+  const sheetID = "1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD";
+  const jsonURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
   let rawClientData = {};
   let currentReviews = [];
   let gmbLink = "";
-  let lastReviewIndex = -1;
+  let lastIndex = -1;
 
   async function init() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -61,86 +62,90 @@
     if (!clientID) { document.getElementById('loader').innerText = "ID missing!"; return; }
 
     try {
-      const response = await fetch(sheetCSV);
-      const csvText = await response.text();
-      
-      // सोपी पद्धत: ओळींमध्ये विभागणे
-      const rows = csvText.split(/\r?\n/);
-      let targetRow = null;
+      const response = await fetch(jsonURL);
+      const text = await response.text();
+      // Google चा कचरा डेटा काढून शुद्ध JSON बनवणे
+      const jsonData = JSON.parse(text.substr(47).slice(0, -2));
+      const rows = jsonData.table.rows;
 
-      for (let row of rows) {
-        // ID शोधण्यासाठी ओळीच्या सुरुवातीला चेक करणे
-        if (row.startsWith(clientID + ",") || row.startsWith('"' + clientID + '"')) {
-          // CSV ला कॉलम मध्ये नीट विभागणे (कोट्स सांभाळून)
-          targetRow = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-          if (targetRow) {
-             targetRow = targetRow.map(v => v.replace(/^"|"$/g, '').trim());
-             if (targetRow[0] === clientID) break; 
-          }
-        }
-      }
+      // ID मॅच होणारी ओळ शोधणे (Column 0 = ID)
+      const targetRow = rows.find(r => r.c[0] && r.c[0].v.toString().trim() === clientID.trim());
 
       if (targetRow) {
-        gmbLink = targetRow[3] || "#";
-        document.getElementById('bizName').innerText = targetRow[1] || "N/A";
-        document.getElementById('bizLoc').innerText = targetRow[2] || "N/A";
-        document.getElementById('bizCat').innerText = targetRow[4] || "General";
+        // डेटा भरणे (v = value)
+        document.getElementById('bizName').innerText = targetRow.c[1] ? targetRow.c[1].v : "N/A";
+        document.getElementById('bizLoc').innerText = targetRow.c[2] ? targetRow.c[2].v : "N/A";
+        gmbLink = targetRow.c[3] ? targetRow.c[3].v : "#";
+        document.getElementById('bizCat').innerText = targetRow.c[4] ? targetRow.c[4].v : "Business";
 
-        const langIndices = {
+        const languages = {
           "English": 5, "Hindi": 6, "Marathi": 7, "Punjabi": 8, "Gujarati": 9,
           "Tamil": 10, "Telugu": 11, "Kannada": 12, "Bengali": 13, "Malayalam": 14
         };
 
         const select = document.getElementById('langSelect');
-        select.innerHTML = "";
         let langFound = false;
 
-        for (let [lang, idx] of Object.entries(langIndices)) {
-          let content = targetRow[idx];
-          if (content && content.length > 5) {
-            // सर्व रिव्ह्यूना नीट साफ करून Array बनवणे
-            let reviewsArray = content.split(";").map(r => r.trim()).filter(r => r.length > 5);
+        for (let [name, idx] of Object.entries(languages)) {
+          if (targetRow.c[idx] && targetRow.c[idx].v) {
+            let cleanText = targetRow.c[idx].v.toString().trim();
+            // सेमी-कोलनने विभागणे
+            let list = cleanText.split(";").map(s => s.trim()).filter(s => s.length > 5);
             
-            if (reviewsArray.length > 0) {
-              rawClientData[lang] = reviewsArray;
+            if (list.length > 0) {
+              rawClientData[name] = list;
               let opt = document.createElement('option');
-              opt.value = lang; opt.innerText = lang;
+              opt.value = name; opt.innerText = name;
               select.appendChild(opt);
               langFound = true;
             }
           }
         }
 
-        if (!langFound) { document.getElementById('loader').innerText = "No Reviews Found!"; return; }
+        if (!langFound) { document.getElementById('loader').innerText = "No Reviews Data!"; return; }
+        
         document.getElementById('loader').style.display = "none";
         document.getElementById('mainCard').style.display = "block";
         updateLang(select.value);
-      } else { document.getElementById('loader').innerText = "ID Not Found!"; }
-    } catch (e) { document.getElementById('loader').innerText = "Load Error!"; }
+
+      } else {
+        document.getElementById('loader').innerText = "Business ID Not Found!";
+      }
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loader').innerText = "Error Loading Data!";
+    }
   }
 
   function updateLang(lang) {
     currentReviews = rawClientData[lang] || [];
-    lastReviewIndex = -1;
+    lastIndex = -1;
     getNewReview();
   }
 
   function getNewReview() {
     if (currentReviews.length === 0) return;
-    let randomIndex;
+    let newIndex;
     if (currentReviews.length > 1) {
-      do { randomIndex = Math.floor(Math.random() * currentReviews.length); } 
-      while (randomIndex === lastReviewIndex);
-    } else { randomIndex = 0; }
-    lastReviewIndex = randomIndex;
-    document.getElementById('reviewText').innerText = currentReviews[randomIndex];
+      do {
+        newIndex = Math.floor(Math.random() * currentReviews.length);
+      } while (newIndex === lastIndex);
+    } else {
+      newIndex = 0;
+    }
+    lastIndex = newIndex;
+    document.getElementById('reviewText').innerText = currentReviews[newIndex];
   }
 
   function copyAndGo() {
     const text = document.getElementById('reviewText').innerText;
-    navigator.clipboard.writeText(text).then(() => { window.location.href = gmbLink; })
-    .catch(() => { window.location.href = gmbLink; });
+    navigator.clipboard.writeText(text).then(() => {
+      window.location.href = gmbLink;
+    }).catch(() => {
+      window.location.href = gmbLink;
+    });
   }
+
   window.onload = init;
 </script>
 </body>
