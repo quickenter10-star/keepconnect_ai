@@ -56,19 +56,12 @@
 
   function parseCSV(text) {
     const rows = [];
+    // ही पद्धत कोट्समधील डेटा व्यवस्थित वाचते
+    const re = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
     const lines = text.split(/\r?\n/);
     for (let line of lines) {
       if (!line.trim()) continue;
-      const values = [];
-      let current = '';
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        let char = line[i];
-        if (char === '"') inQuotes = !inQuotes;
-        else if (char === ',' && !inQuotes) { values.push(current); current = ''; }
-        else current += char;
-      }
-      values.push(current);
+      const values = line.split(re).map(v => v.replace(/^"|"$/g, '').trim());
       rows.push(values);
     }
     return rows;
@@ -83,13 +76,15 @@
       const response = await fetch(sheetCSV);
       const csvText = await response.text();
       const rows = parseCSV(csvText);
-      const data = rows.find(r => r[0] && r[0].trim() === clientID.trim());
+      
+      // ID शोधताना दोन्हीकडच्या स्पेस काढून टाकणे
+      const data = rows.find(r => r[0] && r[0].toString().trim() === clientID.trim());
 
       if (data) {
-        gmbLink = data[3] ? data[3].replace(/^"|"$/g, '').trim() : "#";
-        document.getElementById('bizName').innerText = (data[1] || "N/A").replace(/^"|"$/g, '');
-        document.getElementById('bizLoc').innerText = (data[2] || "N/A").replace(/^"|"$/g, '');
-        document.getElementById('bizCat').innerText = (data[4] || "General").replace(/^"|"$/g, '');
+        gmbLink = data[3] || "#";
+        document.getElementById('bizName').innerText = data[1] || "N/A";
+        document.getElementById('bizLoc').innerText = data[2] || "N/A";
+        document.getElementById('bizCat').innerText = data[4] || "General";
 
         const langIndices = {
           "English": 5, "Hindi": 6, "Marathi": 7, "Punjabi": 8, "Gujarati": 9,
@@ -97,51 +92,54 @@
         };
 
         const select = document.getElementById('langSelect');
+        select.innerHTML = ""; // ड्रॉपडाउन साफ करा
         let langFound = false;
 
         for (let [lang, idx] of Object.entries(langIndices)) {
           let content = data[idx];
-          // हिंदी आणि इतर भाषांचा डेटा नीट वाचण्यासाठी 'if' कंडिशन थोडी सैल केली आहे
-          if (content && content.replace(/^"|"$/g, '').trim().length > 2) {
-            let cleanContent = content.replace(/^"|"$/g, '').trim();
-            rawClientData[lang] = cleanContent.split(";").map(r => r.trim()).filter(r => r.length > 2);
+          if (content && content.trim().length > 2) {
+            // खास बदल: सर्व कोट्स काढून मग सेमी-कोलनने विभागणे
+            let cleanContent = content.replace(/"/g, '').trim();
+            let reviewsArray = cleanContent.split(";").map(r => r.trim()).filter(r => r.length > 5);
             
-            let opt = document.createElement('option');
-            opt.value = lang; opt.innerText = lang;
-            select.appendChild(opt);
-            langFound = true;
+            if (reviewsArray.length > 0) {
+              rawClientData[lang] = reviewsArray;
+              let opt = document.createElement('option');
+              opt.value = lang; opt.innerText = lang;
+              select.appendChild(opt);
+              langFound = true;
+            }
           }
         }
 
-        if (!langFound) { document.getElementById('loader').innerText = "No Reviews!"; return; }
+        if (!langFound) { document.getElementById('loader').innerText = "No Reviews Found!"; return; }
         document.getElementById('loader').style.display = "none";
         document.getElementById('mainCard').style.display = "block";
         updateLang(select.value);
-      } else { document.getElementById('loader').innerText = "ID Not Found!"; }
-    } catch (e) { document.getElementById('loader').innerText = "Load Error!"; }
+      } else { document.getElementById('loader').innerText = "ID: " + clientID + " Not Found!"; }
+    } catch (e) { document.getElementById('loader').innerText = "Network Error!"; }
   }
 
   function updateLang(lang) {
     currentReviews = rawClientData[lang] || [];
-    lastReviewIndex = -1; // भाषा बदलल्यावर रँडम परत सुरू होईल
+    lastReviewIndex = -1;
     getNewReview();
   }
 
   function getNewReview() {
-    if (currentReviews.length <= 1) {
-        if(currentReviews.length === 1) document.getElementById('reviewText').innerText = currentReviews[0];
-        return;
-    }
+    if (currentReviews.length === 0) return;
     
     let randomIndex;
-    // प्रत्येक वेळी नवीन रिव्ह्यू निवडण्यासाठी लूप (Repeat टाळण्यासाठी)
-    do {
-      randomIndex = Math.floor(Math.random() * currentReviews.length);
-    } while (randomIndex === lastReviewIndex);
+    if (currentReviews.length > 1) {
+      do {
+        randomIndex = Math.floor(Math.random() * currentReviews.length);
+      } while (randomIndex === lastReviewIndex);
+    } else {
+      randomIndex = 0;
+    }
 
     lastReviewIndex = randomIndex;
-    let review = currentReviews[randomIndex].replace(/^"|"$/g, '').trim();
-    document.getElementById('reviewText').innerText = review;
+    document.getElementById('reviewText').innerText = currentReviews[randomIndex];
   }
 
   function copyAndGo() {
