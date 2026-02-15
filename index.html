@@ -9,36 +9,35 @@
     .card { background: white; width: 92%; max-width: 420px; border-radius: 30px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); text-align: center; }
     .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .badge { background: #eef7ff; color: #3498db; font-size: 11px; font-weight: 800; padding: 6px 15px; border-radius: 20px; text-transform: uppercase; }
-    .lang-dropdown { border: 1px solid #ddd; border-radius: 12px; padding: 6px 10px; font-size: 14px; background: #fff; outline: none; cursor: pointer; }
-    .biz-name { color: #3498db; font-size: 26px; font-weight: bold; margin: 10px 0 5px 0; text-transform: capitalize; }
-    .location { color: #888; font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-    .category-badge { display: inline-block; background: #eef7ff; color: #3498db; padding: 8px 18px; border-radius: 15px; font-size: 14px; font-weight: 600; border: 1px solid #d0e7ff; margin-bottom: 25px; }
-    .review-card { border: 1px solid #f0f0f0; border-top: 4px solid #3498db; border-radius: 20px; padding: 25px; text-align: center; background: #fff; margin-bottom: 20px; }
-    .stars { color: #f1c40f; margin-bottom: 15px; font-size: 16px; }
-    .review-text { color: #444; font-size: 16px; line-height: 1.6; min-height: 90px; margin: 0; }
-    .action-buttons { display: flex; flex-direction: column; gap: 12px; }
-    .btn { border: none; border-radius: 15px; padding: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; font-size: 16px; }
+    .lang-dropdown { border: 1px solid #ddd; border-radius: 12px; padding: 6px 10px; font-size: 14px; background: #fff; outline: none; cursor: pointer; font-weight: 600; }
+    .biz-name { color: #3498db; font-size: 24px; font-weight: bold; margin: 10px 0 5px 0; line-height: 1.2; }
+    .location { color: #888; font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .category-badge { display: inline-block; background: #eef7ff; color: #3498db; padding: 6px 15px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border: 1px solid #d0e7ff; }
+    .review-card { border: 1px solid #f0f0f0; border-top: 5px solid #3498db; border-radius: 20px; padding: 20px; background: #fff; margin-bottom: 20px; min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
+    .stars { color: #f1c40f; margin-bottom: 10px; font-size: 18px; }
+    .review-text { color: #444; font-size: 16px; line-height: 1.5; margin: 0; font-style: italic; word-wrap: break-word; }
+    .btn { border: none; border-radius: 15px; padding: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; width: 100%; margin-bottom: 10px; transition: 0.2s; }
     .btn-change { background: #f1f4f9; color: #333; border: 1px solid #e0e0e0; }
-    .btn-copy { background: #1da1f2; color: white; }
-    .footer { text-align: center; font-size: 11px; color: #999; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; }
+    .btn-copy { background: #1da1f2; color: white; box-shadow: 0 4px 15px rgba(29, 161, 242, 0.3); }
+    .btn:active { transform: scale(0.98); }
+    .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
     .footer b { color: #3498db; }
-    #loader { color: white; font-family: sans-serif; font-weight: bold; }
+    #loader { color: white; font-weight: bold; font-size: 18px; }
   </style>
 </head>
 <body>
 
-<div id="loader">Loading Data...</div>
+<div id="loader">Loading Database...</div>
 
 <div class="card" id="mainCard" style="display:none;">
   <div class="top-bar">
     <div class="badge">KEEPCONNECT AI</div>
-    <select id="langSelect" class="lang-dropdown" onchange="updateLang(this.value)">
-      </select>
+    <select id="langSelect" class="lang-dropdown" onchange="updateLang(this.value)"></select>
   </div>
 
   <div class="biz-name" id="bizName">Business Name</div>
   <div class="location"><i class="fa-solid fa-location-pin"></i> <span id="bizLoc">Location</span></div>
-  <div class="category-badge"><i class="fa-solid fa-store"></i> • <span id="bizCat">Category</span></div>
+  <div class="category-badge"><i class="fa-solid fa-tag"></i> <span id="bizCat">Category</span></div>
 
   <div class="review-card">
     <div class="stars">★★★★★</div>
@@ -46,46 +45,67 @@
   </div>
 
   <div class="action-buttons">
-    <button class="btn btn-change" onclick="getNewReview()"><i class="fa-solid fa-arrows-rotate"></i> Change Review</button>
-    <button class="btn btn-copy" onclick="copyAndGo()"><i class="fa-solid fa-paste"></i> Copy & Go</button>
+    <button class="btn btn-change" onclick="getNewReview()"><i class="fa-solid fa-sync-alt"></i> Change Review</button>
+    <button class="btn btn-copy" onclick="copyAndGo()"><i class="fa-solid fa-copy"></i> Copy & Go</button>
   </div>
 
   <div class="footer">⚡ Powered by <b>KeepConnect App</b></div>
 </div>
 
 <script>
-  // १. तुमची Google Sheet CSV लिंक इथे टाका
+  // १. तुमची Google Sheet CSV लिंक
   const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD/pub?gid=0&single=true&output=csv"; 
 
   let rawClientData = {};
   let currentReviews = [];
   let gmbLink = "";
 
+  // Smart CSV Parser: रिव्ह्यूमध्ये स्वल्पविराम (comma) असल्यास डेटा फुटू नये म्हणून हे फंक्शन आहे.
+  function parseCSV(text) {
+    const rows = [];
+    const lines = text.split(/\r?\n/);
+    for (let line of lines) {
+      if (!line.trim()) continue;
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        let char = line[i];
+        if (char === '"') { inQuotes = !inQuotes; }
+        else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+        else { current += char; }
+      }
+      values.push(current.trim());
+      rows.push(values);
+    }
+    return rows;
+  }
+
   async function init() {
     const urlParams = new URLSearchParams(window.location.search);
     const clientID = urlParams.get('id');
 
     if (!clientID) {
-      document.getElementById('loader').innerText = "Error: No Client ID provided in URL!";
+      document.getElementById('loader').innerHTML = "❌ Error: ID missing!<br><small>Use ?id=101 at end of URL</small>";
       return;
     }
 
     try {
       const response = await fetch(sheetCSV);
       const csvText = await response.text();
-      // CSV Parsing (Handling commas in quotes if necessary)
-      const rows = csvText.split("\n").map(row => row.split(","));
+      const rows = parseCSV(csvText);
       
-      const data = rows.find(r => r[0] && r[0].trim() === clientID);
+      // ID मॅच करणे (कॉलम A = Index 0)
+      const data = rows.find(r => r[0] && r[0].toString().trim() === clientID.toString().trim());
 
       if (data) {
-        // Data Mapping (A=0, B=1, C=2, D=3, E=4, F=5... O=14)
-        gmbLink = data[3].trim();
-        document.getElementById('bizName').innerText = data[1];
-        document.getElementById('bizLoc').innerText = data[2];
-        document.getElementById('bizCat').innerText = data[4];
+        // Mapping: A=0, B=1(Name), C=2(Loc), D=3(Link), E=4(Cat)
+        gmbLink = data[3] ? data[3].replace(/^"|"$/g, '') : "#";
+        document.getElementById('bizName').innerText = data[1] || "N/A";
+        document.getElementById('bizLoc').innerText = data[2] || "N/A";
+        document.getElementById('bizCat').innerText = data[4] || "General";
 
-        // Language Mapping
+        // Languages: F=5 to O=14
         const langMap = {
           "English": data[5], "Hindi": data[6], "Marathi": data[7],
           "Punjabi": data[8], "Gujarati": data[9], "Tamil": data[10],
@@ -97,20 +117,20 @@
 
         for (let lang in langMap) {
           let content = langMap[lang];
-          // Check if column has data and is not just whitespace
+          // फक्त ज्या कॉलममध्ये डेटा आहे त्याच भाषा दाखवणे (length > 2)
           if (content && content.trim().length > 2) {
-            rawClientData[lang] = content.split(";");
+            rawClientData[lang] = content.split(";").map(r => r.replace(/^"|"$/g, '').trim());
             let opt = document.createElement('option');
             opt.value = lang;
-            opt.innerHTML = lang;
+            opt.innerText = lang;
             select.appendChild(opt);
             langFound = true;
           }
         }
 
-        if(!langFound) {
-            document.getElementById('loader').innerText = "No reviews available for this client!";
-            return;
+        if (!langFound) {
+          document.getElementById('loader').innerText = "⚠️ No reviews found for this Client!";
+          return;
         }
 
         document.getElementById('loader').style.display = "none";
@@ -118,11 +138,10 @@
         updateLang(select.value);
 
       } else {
-        document.getElementById('loader').innerText = "Error: Client ID not found in database!";
+        document.getElementById('loader').innerText = "❌ Client ID Not Found!";
       }
     } catch (e) {
-      document.getElementById('loader').innerText = "Error: Unable to fetch data!";
-      console.error(e);
+      document.getElementById('loader').innerText = "❌ Connection Failed!";
     }
   }
 
@@ -134,18 +153,14 @@
   function getNewReview() {
     if (currentReviews.length === 0) return;
     const randomIndex = Math.floor(Math.random() * currentReviews.length);
-    const review = currentReviews[randomIndex].trim();
-    document.getElementById('reviewText').innerText = review;
+    document.getElementById('reviewText').innerText = currentReviews[randomIndex];
   }
 
   function copyAndGo() {
     const text = document.getElementById('reviewText').innerText;
-    if(!text || text.includes("Loading")) return;
-
     navigator.clipboard.writeText(text).then(() => {
       window.location.href = gmbLink;
     }).catch(() => {
-      // Fallback if clipboard fails
       window.location.href = gmbLink;
     });
   }
