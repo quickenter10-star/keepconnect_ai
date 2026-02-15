@@ -53,14 +53,12 @@
 </div>
 
 <script>
-  // १. तुमची Google Sheet CSV लिंक
   const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1Ne6zMu836ZuBEaUEr3xAHs2fqZN57Q-eRDYP-WgZ4mIeDodjU1IiE-UBU6gqYm4awbnrjnf99uVD/pub?gid=0&single=true&output=csv"; 
 
   let rawClientData = {};
   let currentReviews = [];
   let gmbLink = "";
 
-  // Smart CSV Parser: रिव्ह्यूमध्ये स्वल्पविराम (comma) असल्यास डेटा फुटू नये म्हणून हे फंक्शन आहे.
   function parseCSV(text) {
     const rows = [];
     const lines = text.split(/\r?\n/);
@@ -86,7 +84,7 @@
     const clientID = urlParams.get('id');
 
     if (!clientID) {
-      document.getElementById('loader').innerHTML = "❌ Error: ID missing!<br><small>Use ?id=101 at end of URL</small>";
+      document.getElementById('loader').innerHTML = "❌ Error: ID missing!";
       return;
     }
 
@@ -95,17 +93,14 @@
       const csvText = await response.text();
       const rows = parseCSV(csvText);
       
-      // ID मॅच करणे (कॉलम A = Index 0)
       const data = rows.find(r => r[0] && r[0].toString().trim() === clientID.toString().trim());
 
       if (data) {
-        // Mapping: A=0, B=1(Name), C=2(Loc), D=3(Link), E=4(Cat)
-        gmbLink = data[3] ? data[3].replace(/^"|"$/g, '') : "#";
-        document.getElementById('bizName').innerText = data[1] || "N/A";
-        document.getElementById('bizLoc').innerText = data[2] || "N/A";
-        document.getElementById('bizCat').innerText = data[4] || "General";
+        gmbLink = data[3] ? data[3].replace(/^"|"$/g, '').trim() : "#";
+        document.getElementById('bizName').innerText = (data[1] || "N/A").replace(/^"|"$/g, '');
+        document.getElementById('bizLoc').innerText = (data[2] || "N/A").replace(/^"|"$/g, '');
+        document.getElementById('bizCat').innerText = (data[4] || "General").replace(/^"|"$/g, '');
 
-        // Languages: F=5 to O=14
         const langMap = {
           "English": data[5], "Hindi": data[6], "Marathi": data[7],
           "Punjabi": data[8], "Gujarati": data[9], "Tamil": data[10],
@@ -117,9 +112,9 @@
 
         for (let lang in langMap) {
           let content = langMap[lang];
-          // फक्त ज्या कॉलममध्ये डेटा आहे त्याच भाषा दाखवणे (length > 2)
           if (content && content.trim().length > 2) {
-            rawClientData[lang] = content.split(";").map(r => r.replace(/^"|"$/g, '').trim());
+            // रिव्ह्यू फिल्टर: फक्त असे रिव्ह्यू घ्या ज्यात मजकूर आहे
+            rawClientData[lang] = content.split(";").map(r => r.replace(/^"|"$/g, '').trim()).filter(r => r.length > 2);
             let opt = document.createElement('option');
             opt.value = lang;
             opt.innerText = lang;
@@ -129,7 +124,7 @@
         }
 
         if (!langFound) {
-          document.getElementById('loader').innerText = "⚠️ No reviews found for this Client!";
+          document.getElementById('loader').innerText = "⚠️ No reviews found!";
           return;
         }
 
@@ -151,21 +146,5 @@
   }
 
   function getNewReview() {
-    if (currentReviews.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * currentReviews.length);
-    document.getElementById('reviewText').innerText = currentReviews[randomIndex];
-  }
-
-  function copyAndGo() {
-    const text = document.getElementById('reviewText').innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      window.location.href = gmbLink;
-    }).catch(() => {
-      window.location.href = gmbLink;
-    });
-  }
-
-  window.onload = init;
-</script>
-</body>
-</html>
+    if (currentReviews.length === 0) {
+      document.getElementById('reviewText').innerText =
